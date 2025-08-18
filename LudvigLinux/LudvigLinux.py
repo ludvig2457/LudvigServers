@@ -1,6 +1,7 @@
 import os
 import sys
 import getpass
+import urllib.request
 from colorama import Fore, Style, init
 init(autoreset=True)
 
@@ -18,6 +19,9 @@ services = {"ssh": False, "nginx": False, "mysql": False}
 current_user = None
 current_dir = None
 next_pid = 4
+
+# URL последней версии LudvigLinux на GitHub
+GITHUB_URL = "https://raw.githubusercontent.com/ludvig2457/LudvigServers/main/LudvigLinux/LudvigLinux.py"
 
 # ======== Функции ========
 def create_system(username, password):
@@ -40,6 +44,27 @@ def create_system(username, password):
 
     current_dir = os.path.join(HOME_DIR, username)
     print(f"LudvigLinux installed! User '{username}' home: {current_dir}")
+
+def download_new_version():
+    """Скачивает последнюю версию LudvigLinux.py с GitHub"""
+    local_path = os.path.abspath(sys.argv[0])
+    backup_path = local_path + ".bak"
+    
+    try:
+        # создаем резервную копию текущего файла
+        os.rename(local_path, backup_path)
+        print("Downloading latest LudvigLinux...")
+        urllib.request.urlretrieve(GITHUB_URL, local_path)
+        print("Download completed!")
+        # удаляем резерв
+        os.remove(backup_path)
+        return local_path
+    except Exception as e:
+        print("Update failed:", e)
+        # если ошибка, возвращаем старый файл обратно
+        if os.path.exists(backup_path):
+            os.rename(backup_path, local_path)
+        return None
 
 def run_command(cmd):
     global current_dir, next_pid
@@ -171,7 +196,13 @@ def run_command(cmd):
                 print(" extra          1630.2 KiB  500K/s 00:03 [################] 100%")
                 print(" community      5123.4 KiB  1.2M/s 00:04 [################] 100%")
                 print(":: Starting full system upgrade...")
-                print(" nothing to do")
+                print(":: Updating LudvigLinux...")
+                new_path = download_new_version()
+                if new_path:
+                    print(":: Restarting updated LudvigLinux...")
+                    os.execv(sys.executable, ["python"] + [new_path])
+                else:
+                    print(":: Update failed, continuing with current version.")
             else:
                 print(f"pacman: unknown operation {op}")
 
@@ -210,6 +241,7 @@ def run_command(cmd):
 
     else:
         print(f"{command}: command not found")
+
 
 # ===== Основный цикл =====
 def run():
