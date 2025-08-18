@@ -12,8 +12,12 @@ VAR_DIR = os.path.join(BASE_DIR, "var")
 
 installed_packages = []
 history = []
+processes = {1: "init", 2: "bash", 3: "htop"}
+services = {"ssh": False, "nginx": False, "mysql": False}
+
 current_user = None
 current_dir = None
+next_pid = 4
 
 # ======== Функции ========
 def create_system(username, password):
@@ -38,7 +42,7 @@ def create_system(username, password):
     print(f"LudvigLinux installed! User '{username}' home: {current_dir}")
 
 def run_command(cmd):
-    global current_dir
+    global current_dir, next_pid
     args = cmd.strip().split()
     if not args:
         return
@@ -106,16 +110,78 @@ def run_command(cmd):
             else:
                 print(f"rm: cannot remove '{args[1]}', no such file or directory")
 
-    # ===== Прочие команды =====
+    # ===== Процессы =====
+    elif command == "ps":
+        for pid, proc in processes.items():
+            print(f"{pid:<5} {proc}")
+
+    elif command == "kill":
+        if len(args) < 2:
+            print("kill: missing pid")
+        else:
+            try:
+                pid = int(args[1])
+                if pid in processes:
+                    print(f"Killed process {pid} ({processes[pid]})")
+                    del processes[pid]
+                else:
+                    print(f"kill: {pid}: no such process")
+            except ValueError:
+                print("kill: pid must be a number")
+
+    # ===== Сервисы =====
+    elif command == "systemctl":
+        if len(args) < 3:
+            print("systemctl: usage: systemctl <start|stop|status> <service>")
+        else:
+            action, service = args[1], args[2]
+            if service not in services:
+                print(f"systemctl: {service}: not found")
+            else:
+                if action == "start":
+                    services[service] = True
+                    print(f"Started {service}.service")
+                elif action == "stop":
+                    services[service] = False
+                    print(f"Stopped {service}.service")
+                elif action == "status":
+                    status = "active (running)" if services[service] else "inactive (dead)"
+                    print(f"{service}.service - Fake service\n   Loaded: loaded\n   Active: {status}")
+                else:
+                    print(f"systemctl: unknown action {action}")
+
+    # ===== pacman =====
+    elif command == "pacman":
+        if len(args) < 2:
+            print("pacman: missing operation")
+        else:
+            op = args[1]
+            if op == "-S" and len(args) > 2:
+                pkg = args[2]
+                installed_packages.append(pkg)
+                print(f":: installing {pkg}... [DONE]")
+            elif op == "-Qs":
+                if installed_packages:
+                    print("\n".join([f"local/{pkg} 1.0-1" for pkg in installed_packages]))
+                else:
+                    print("No packages installed.")
+            elif op == "-Syu":
+                print(":: Synchronizing package databases...")
+                print(" core            134.5 KiB  125K/s 00:01 [################] 100%")
+                print(" extra          1630.2 KiB  500K/s 00:03 [################] 100%")
+                print(" community      5123.4 KiB  1.2M/s 00:04 [################] 100%")
+                print(":: Starting full system upgrade...")
+                print(" nothing to do")
+            else:
+                print(f"pacman: unknown operation {op}")
+
+    # ===== Прочее =====
     elif command == "history":
         for i, h in enumerate(history, 1):
             print(f"{i}  {h}")
 
     elif command == "clear":
         os.system("cls" if os.name == "nt" else "clear")
-
-    elif command in ["exit", "quit"]:
-        sys.exit(0)
 
     elif command == "whoami":
         print(current_user)
@@ -131,13 +197,21 @@ def run_command(cmd):
 \\__\\_/__/  Terminal: Python Virtual OS
 {Style.RESET_ALL}""")
 
+    elif command == "shutdown":
+        print("System shutting down...")
+        sys.exit(0)
+
+    elif command == "reboot":
+        print("System rebooting...")
+        os.execv(sys.executable, ["python"] + sys.argv)
+
     elif command == "help":
-        print("Commands: ls, cd, pwd, cat, touch, mkdir, rm, history, clear, whoami, neofetch, exit")
+        print("Commands: ls, cd, pwd, cat, touch, mkdir, rm, ps, kill, systemctl, pacman, history, clear, whoami, neofetch, reboot, shutdown, exit")
 
     else:
         print(f"{command}: command not found")
 
-# ======== Основной цикл ========
+# ===== Основный цикл =====
 def run():
     print(f"{Fore.YELLOW}Welcome to LudvigLinux installer!{Style.RESET_ALL}")
     username = input("Enter username: ")
