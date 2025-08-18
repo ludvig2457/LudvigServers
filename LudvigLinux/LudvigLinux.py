@@ -2,6 +2,7 @@ import os
 import sys
 import getpass
 import urllib.request
+import time
 from colorama import Fore, Style, init
 init(autoreset=True)
 
@@ -20,24 +21,20 @@ current_user = None
 current_dir = None
 next_pid = 4
 
-# URL последней версии LudvigLinux на GitHub
 GITHUB_URL = "https://raw.githubusercontent.com/ludvig2457/LudvigServers/main/LudvigLinux/LudvigLinux.py"
 
 # ======== Функции ========
 def create_system(username, password):
-    """Создаёт реальную структуру LudvigLinux с пользователем"""
     global current_user, current_dir
     current_user = username
     os.makedirs(os.path.join(HOME_DIR, username), exist_ok=True)
     os.makedirs(ETC_DIR, exist_ok=True)
     os.makedirs(VAR_DIR, exist_ok=True)
 
-    # приветственный файл
     user_file = os.path.join(HOME_DIR, username, "welcome.txt")
     with open(user_file, "w", encoding="utf-8") as f:
         f.write(f"Welcome {username} to LudvigLinux! 🚀\n")
 
-    # базовый конфиг
     config_file = os.path.join(ETC_DIR, "config.cfg")
     with open(config_file, "w", encoding="utf-8") as f:
         f.write("config_version=1.0\n")
@@ -45,26 +42,56 @@ def create_system(username, password):
     current_dir = os.path.join(HOME_DIR, username)
     print(f"LudvigLinux installed! User '{username}' home: {current_dir}")
 
-def download_new_version():
-    """Скачивает последнюю версию LudvigLinux.py с GitHub"""
+def download_with_progress(url, local_path):
+    """Скачивает файл с прогресс-баром"""
+    print(f"{Fore.CYAN}Downloading latest LudvigLinux...{Style.RESET_ALL}")
+    try:
+        response = urllib.request.urlopen(url)
+        total = int(response.getheader('Content-Length').strip())
+        downloaded = 0
+        block_size = 8192
+
+        with open(local_path, 'wb') as f:
+            while True:
+                buffer = response.read(block_size)
+                if not buffer:
+                    break
+                downloaded += len(buffer)
+                f.write(buffer)
+                done = int(40 * downloaded / total)
+                sys.stdout.write(f"\r[{Fore.GREEN}{'#' * done}{Style.RESET_ALL}{'-' * (40 - done)}] "
+                                 f"{downloaded * 100 // total}%")
+                sys.stdout.flush()
+        print(f"\n{Fore.GREEN}Download completed!{Style.RESET_ALL}")
+        return True
+    except Exception as e:
+        print(f"\n{Fore.RED}Download failed: {e}{Style.RESET_ALL}")
+        return False
+
+def update_ludviglinux():
     local_path = os.path.abspath(sys.argv[0])
     backup_path = local_path + ".bak"
-    
+
+    # Создаем резерв
     try:
-        # создаем резервную копию текущего файла
         os.rename(local_path, backup_path)
-        print("Downloading latest LudvigLinux...")
-        urllib.request.urlretrieve(GITHUB_URL, local_path)
-        print("Download completed!")
-        # удаляем резерв
-        os.remove(backup_path)
-        return local_path
+        print(f"{Fore.YELLOW}Old version backed up.{Style.RESET_ALL}")
+        time.sleep(0.5)
+
+        # Скачиваем новую версию
+        success = download_with_progress(GITHUB_URL, local_path)
+        if success:
+            print(f"{Fore.GREEN}Old version removed.{Style.RESET_ALL}")
+            os.remove(backup_path)
+            print(f"{Fore.GREEN}Restarting LudvigLinux...{Style.RESET_ALL}")
+            os.execv(sys.executable, ["python"] + [local_path])
+        else:
+            print(f"{Fore.RED}Update failed, restoring old version...{Style.RESET_ALL}")
+            os.rename(backup_path, local_path)
     except Exception as e:
-        print("Update failed:", e)
-        # если ошибка, возвращаем старый файл обратно
+        print(f"{Fore.RED}Update error: {e}{Style.RESET_ALL}")
         if os.path.exists(backup_path):
             os.rename(backup_path, local_path)
-        return None
 
 def run_command(cmd):
     global current_dir, next_pid
@@ -192,17 +219,9 @@ def run_command(cmd):
                     print("No packages installed.")
             elif op == "-Syu":
                 print(":: Synchronizing package databases...")
-                print(" core            134.5 KiB  125K/s 00:01 [################] 100%")
-                print(" extra          1630.2 KiB  500K/s 00:03 [################] 100%")
-                print(" community      5123.4 KiB  1.2M/s 00:04 [################] 100%")
+                time.sleep(0.5)
                 print(":: Starting full system upgrade...")
-                print(":: Updating LudvigLinux...")
-                new_path = download_new_version()
-                if new_path:
-                    print(":: Restarting updated LudvigLinux...")
-                    os.execv(sys.executable, ["python"] + [new_path])
-                else:
-                    print(":: Update failed, continuing with current version.")
+                update_ludviglinux()
             else:
                 print(f"pacman: unknown operation {op}")
 
