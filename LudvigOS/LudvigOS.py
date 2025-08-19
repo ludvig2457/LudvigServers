@@ -22,6 +22,7 @@ current_dir = None
 next_pid = 4
 
 GITHUB_URL = "https://raw.githubusercontent.com/ludvig2457/LudvigServers/main/LudvigOS/LudvigOS.py"
+GUI_URL = "https://raw.githubusercontent.com/ludvig2457/LudvigServers/main/LudvigOS/LudvigOSGUI.py"
 
 # ======== Функции ========
 def create_system(username, password):
@@ -44,7 +45,7 @@ def create_system(username, password):
 
 def download_with_progress(url, local_path):
     """Скачивает файл с прогресс-баром"""
-    print(f"{Fore.CYAN}Downloading latest LudvigLinux...{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}Downloading...{Style.RESET_ALL}")
     try:
         response = urllib.request.urlopen(url)
         total = int(response.getheader('Content-Length').strip())
@@ -72,13 +73,11 @@ def update_ludviglinux():
     local_path = os.path.abspath(sys.argv[0])
     backup_path = local_path + ".bak"
 
-    # Создаем резерв
     try:
         os.rename(local_path, backup_path)
         print(f"{Fore.YELLOW}Old version backed up.{Style.RESET_ALL}")
         time.sleep(0.5)
 
-        # Скачиваем новую версию
         success = download_with_progress(GITHUB_URL, local_path)
         if success:
             print(f"{Fore.GREEN}Old version removed.{Style.RESET_ALL}")
@@ -225,6 +224,23 @@ def run_command(cmd):
             else:
                 print(f"pacman: unknown operation {op}")
 
+    # ===== GUI =====
+    elif command == "gui":
+        gui_file = os.path.join(BASE_DIR, "LudvigOSGUI.py")
+        if not os.path.exists(gui_file):
+            print("GUI not found. Downloading...")
+            if download_with_progress(GUI_URL, gui_file):
+                print("GUI downloaded successfully.")
+            else:
+                print("Failed to download GUI.")
+                return
+        print("Launching GUI...")
+        try:
+            os.system(f"{sys.executable} {gui_file}")
+            print("Returned from GUI.")
+        except Exception as e:
+            print(f"Error launching GUI: {e}")
+
     # ===== Прочее =====
     elif command == "history":
         for i, h in enumerate(history, 1):
@@ -256,7 +272,7 @@ def run_command(cmd):
         os.execv(sys.executable, ["python"] + sys.argv)
 
     elif command == "help":
-        print("Commands: ls, cd, pwd, cat, touch, mkdir, rm, ps, kill, systemctl, pacman, history, clear, whoami, neofetch, reboot, shutdown, exit")
+        print("Commands: ls, cd, pwd, cat, touch, mkdir, rm, ps, kill, systemctl, pacman, history, clear, whoami, neofetch, gui, reboot, shutdown, exit")
 
     else:
         print(f"{command}: command not found")
