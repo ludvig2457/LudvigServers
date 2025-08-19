@@ -21,7 +21,7 @@ current_user = None
 current_dir = None
 next_pid = 4
 
-GITHUB_URL = "https://raw.githubusercontent.com/ludvig2457/LudvigServers/main/LudvigLinux/LudvigLinux.py"
+GITHUB_URL = "https://raw.githubusercontent.com/ludvig2457/LudvigServers/main/LudvigOS/LudvigOS.py"
 
 # ======== Функции ========
 def create_system(username, password):
