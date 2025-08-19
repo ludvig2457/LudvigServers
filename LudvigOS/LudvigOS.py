@@ -256,31 +256,51 @@ def run_command(cmd):
             return
         op = args[1]
 
+        # Установка пакета
         if op == "-S" and len(args) > 2:
             pkg = args[2]
+            if pkg not in installed_packages:
+                installed_packages.append(pkg)
+            print(f":: installing {pkg}... [DONE]")
+
+            # Специально для VS Code
             if pkg == "code":
-                code_path = os.path.join(APPS_DIR, "VSCodeSetup.exe")
+                code_path = os.path.join(BASE_DIR, "apps", "VSCodeSetup.exe")
+                os.makedirs(os.path.dirname(code_path), exist_ok=True)
                 if not os.path.exists(code_path):
                     url = "https://update.code.visualstudio.com/latest/win32-x64-user/stable"
                     print(f"{Fore.CYAN}Downloading {pkg}...{Style.RESET_ALL}")
-                    download_with_progress(url, code_path)
-                print(f"{Fore.GREEN}VS Code ready! Launch with 'code'{Style.RESET_ALL}")
-            installed_packages.append(pkg)
-            print(f":: installing {pkg}... [DONE]")
+                    if download_with_progress(url, code_path):
+                        print(f"{Fore.GREEN}VS Code downloaded! Launch with 'code'{Style.RESET_ALL}")
+                    else:
+                        print(f"{Fore.RED}Failed to download VS Code.{Style.RESET_ALL}")
 
+        # Удаление пакета
         elif op == "-R" and len(args) > 2:
             pkg = args[2]
             if pkg in installed_packages:
                 installed_packages.remove(pkg)
-                print(f":: removed {pkg}")
+                print(f":: removed {pkg}... [DONE]")
             else:
                 print(f"pacman: {pkg} is not installed")
 
+        # Синхронизация базы
         elif op == "-Sy":
             print(":: Synchronizing package databases...")
             time.sleep(0.5)
             print(":: Database updated!")
 
+        # Полное обновление системы
+        elif op == "-Syu":
+            print(":: Synchronizing package databases...")
+            time.sleep(0.5)
+            print(":: Starting full system upgrade...")
+            for pkg in installed_packages:
+                print(f":: upgrading {pkg}... [DONE]")
+                time.sleep(0.2)
+            update_ludviglinux()
+
+        # Поиск установленных пакетов
         elif op == "-Qs":
             if installed_packages:
                 print("\n".join([f"local/{pkg} 1.0-1" for pkg in installed_packages]))
@@ -290,16 +310,14 @@ def run_command(cmd):
         else:
             print(f"pacman: unknown operation {op}")
 
-    # ===== Запуск приложений =====
+    # ===== Запуск реальных приложений =====
     elif command == "code":
-        try:
-            code_path = os.path.join(APPS_DIR, "VSCodeSetup.exe")
-            if os.path.exists(code_path):
-                subprocess.Popen([code_path])
-            else:
-                subprocess.Popen(["code"])
-        except Exception as e:
-            print(f"Failed to launch code: {e}")
+        code_path = os.path.join(BASE_DIR, "apps", "VSCodeSetup.exe")
+        if os.path.exists(code_path):
+            print(f"{Fore.GREEN}Launching VS Code...{Style.RESET_ALL}")
+            os.startfile(code_path)
+        else:
+            print(f"{Fore.RED}VS Code is not installed. Use 'pacman -S code'{Style.RESET_ALL}")
 
     # ===== GUI =====
     elif command == "gui":
