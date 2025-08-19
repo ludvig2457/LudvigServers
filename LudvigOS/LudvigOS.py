@@ -264,7 +264,7 @@ def run_command(cmd):
             print(f":: installing {pkg}... [DONE]")
 
             # Специально для VS Code
-            if pkg == "code":
+            if pkg.lower() == "code":
                 code_path = os.path.join(BASE_DIR, "apps", "VSCodeSetup.exe")
                 os.makedirs(os.path.dirname(code_path), exist_ok=True)
                 if not os.path.exists(code_path):
@@ -274,6 +274,18 @@ def run_command(cmd):
                         print(f"{Fore.GREEN}VS Code downloaded! Launch with 'code'{Style.RESET_ALL}")
                     else:
                         print(f"{Fore.RED}Failed to download VS Code.{Style.RESET_ALL}")
+
+            # Специально для SuperLauncher
+            elif pkg.lower() == "superlauncher":
+                sl_path = os.path.join(BASE_DIR, "apps", "SuperLauncher1.4.0.7.exe")
+                os.makedirs(os.path.dirname(sl_path), exist_ok=True)
+                if not os.path.exists(sl_path):
+                    url = "https://github.com/ludvig2457/SuperLauncher/releases/download/v1.4.0.7/SuperLauncher1.4.0.7.exe"
+                    print(f"{Fore.CYAN}Downloading {pkg}...{Style.RESET_ALL}")
+                    if download_with_progress(url, sl_path):
+                        print(f"{Fore.GREEN}SuperLauncher downloaded! Launch with 'superlauncher'{Style.RESET_ALL}")
+                    else:
+                        print(f"{Fore.RED}Failed to download SuperLauncher.{Style.RESET_ALL}")
 
         # Удаление пакета
         elif op == "-R" and len(args) > 2:
@@ -311,13 +323,21 @@ def run_command(cmd):
             print(f"pacman: unknown operation {op}")
 
     # ===== Запуск реальных приложений =====
-    elif command == "code":
+    elif command.lower() == "code":
         code_path = os.path.join(BASE_DIR, "apps", "VSCodeSetup.exe")
         if os.path.exists(code_path):
             print(f"{Fore.GREEN}Launching VS Code...{Style.RESET_ALL}")
             os.startfile(code_path)
         else:
             print(f"{Fore.RED}VS Code is not installed. Use 'pacman -S code'{Style.RESET_ALL}")
+
+    elif command.lower() == "superlauncher":
+        sl_path = os.path.join(BASE_DIR, "apps", "SuperLauncher1.4.0.7.exe")
+        if os.path.exists(sl_path):
+            print(f"{Fore.GREEN}Launching SuperLauncher...{Style.RESET_ALL}")
+            os.startfile(sl_path)
+        else:
+            print(f"{Fore.RED}SuperLauncher is not installed. Use 'pacman -S superlauncher'{Style.RESET_ALL}")
 
     # ===== GUI =====
     elif command == "gui":
