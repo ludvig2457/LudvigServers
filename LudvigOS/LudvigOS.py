@@ -4,6 +4,7 @@ import getpass
 import urllib.request
 import time
 import random
+import subprocess
 from colorama import Fore, Style, init
 init(autoreset=True)
 
@@ -12,6 +13,7 @@ BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "LudvigLinux
 HOME_DIR = os.path.join(BASE_DIR, "home")
 ETC_DIR = os.path.join(BASE_DIR, "etc")
 VAR_DIR = os.path.join(BASE_DIR, "var")
+APPS_DIR = os.path.join(BASE_DIR, "apps")
 
 installed_packages = []
 history = []
@@ -37,6 +39,7 @@ def create_system(username, password):
     os.makedirs(os.path.join(HOME_DIR, username), exist_ok=True)
     os.makedirs(ETC_DIR, exist_ok=True)
     os.makedirs(VAR_DIR, exist_ok=True)
+    os.makedirs(APPS_DIR, exist_ok=True)
 
     user_file = os.path.join(HOME_DIR, username, "welcome.txt")
     with open(user_file, "w", encoding="utf-8") as f:
@@ -57,7 +60,6 @@ def download_with_progress(url, local_path):
         total = int(response.getheader('Content-Length').strip())
         downloaded = 0
         block_size = 8192
-
         with open(local_path, 'wb') as f:
             while True:
                 buffer = response.read(block_size)
@@ -251,24 +253,53 @@ def run_command(cmd):
     elif command == "pacman":
         if len(args) < 2:
             print("pacman: missing operation")
-        else:
-            op = args[1]
-            if op == "-S" and len(args) > 2:
-                pkg = args[2]
-                installed_packages.append(pkg)
-                print(f":: installing {pkg}... [DONE]")
-            elif op == "-Qs":
-                if installed_packages:
-                    print("\n".join([f"local/{pkg} 1.0-1" for pkg in installed_packages]))
-                else:
-                    print("No packages installed.")
-            elif op == "-Syu":
-                print(":: Synchronizing package databases...")
-                time.sleep(0.5)
-                print(":: Starting full system upgrade...")
-                update_ludviglinux()
+            return
+        op = args[1]
+
+        if op == "-S" and len(args) > 2:
+            pkg = args[2]
+            if pkg == "code":
+                code_path = os.path.join(APPS_DIR, "VSCodeSetup.exe")
+                if not os.path.exists(code_path):
+                    url = "https://update.code.visualstudio.com/latest/win32-x64-user/stable"
+                    print(f"{Fore.CYAN}Downloading {pkg}...{Style.RESET_ALL}")
+                    download_with_progress(url, code_path)
+                print(f"{Fore.GREEN}VS Code ready! Launch with 'code'{Style.RESET_ALL}")
+            installed_packages.append(pkg)
+            print(f":: installing {pkg}... [DONE]")
+
+        elif op == "-R" and len(args) > 2:
+            pkg = args[2]
+            if pkg in installed_packages:
+                installed_packages.remove(pkg)
+                print(f":: removed {pkg}")
             else:
-                print(f"pacman: unknown operation {op}")
+                print(f"pacman: {pkg} is not installed")
+
+        elif op == "-Sy":
+            print(":: Synchronizing package databases...")
+            time.sleep(0.5)
+            print(":: Database updated!")
+
+        elif op == "-Qs":
+            if installed_packages:
+                print("\n".join([f"local/{pkg} 1.0-1" for pkg in installed_packages]))
+            else:
+                print("No packages installed.")
+
+        else:
+            print(f"pacman: unknown operation {op}")
+
+    # ===== Запуск приложений =====
+    elif command == "code":
+        try:
+            code_path = os.path.join(APPS_DIR, "VSCodeSetup.exe")
+            if os.path.exists(code_path):
+                subprocess.Popen([code_path])
+            else:
+                subprocess.Popen(["code"])
+        except Exception as e:
+            print(f"Failed to launch code: {e}")
 
     # ===== GUI =====
     elif command == "gui":
@@ -324,7 +355,7 @@ def run_command(cmd):
         os.execv(sys.executable, ["python"] + sys.argv)
 
     elif command == "help":
-        print("Commands: ls, cd, pwd, cat, touch, mkdir, rm, ps, top, kill, nano, systemctl, pacman, history, clear, whoami, neofetch, uptime, gui, reboot, shutdown, exit")
+        print("Commands: ls, cd, pwd, cat, touch, mkdir, rm, ps, top, kill, nano, systemctl, pacman, code, history, clear, whoami, neofetch, uptime, gui, reboot, shutdown, exit")
 
     else:
         print(f"{command}: command not found")
