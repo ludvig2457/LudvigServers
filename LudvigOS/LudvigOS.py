@@ -52,30 +52,35 @@ def create_system(username, password):
     current_dir = os.path.join(HOME_DIR, username)
     print(f"LudvigLinux installed! User '{username}' home: {current_dir}")
 
-def download_with_progress(url, local_path):
-    """Скачивает файл с прогресс-баром"""
-    print(f"{Fore.CYAN}Downloading...{Style.RESET_ALL}")
-    try:
-        response = urllib.request.urlopen(url)
-        total = int(response.getheader('Content-Length').strip())
-        downloaded = 0
-        block_size = 8192
-        with open(local_path, 'wb') as f:
-            while True:
-                buffer = response.read(block_size)
-                if not buffer:
-                    break
-                downloaded += len(buffer)
-                f.write(buffer)
-                done = int(40 * downloaded / total)
-                sys.stdout.write(f"\r[{Fore.GREEN}{'#' * done}{Style.RESET_ALL}{'-' * (40 - done)}] "
-                                 f"{downloaded * 100 // total}%")
-                sys.stdout.flush()
-        print(f"\n{Fore.GREEN}Download completed!{Style.RESET_ALL}")
-        return True
-    except Exception as e:
-        print(f"\n{Fore.RED}Download failed: {e}{Style.RESET_ALL}")
-        return False
+def download_with_progress(url, local_path, retries=3):
+    """Скачивает файл с прогресс-баром, с заголовком User-Agent и повторами"""
+    for attempt in range(1, retries + 1):
+        print(f"{Fore.CYAN}Downloading (attempt {attempt})...{Style.RESET_ALL}")
+        try:
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req) as response:
+                total = response.getheader('Content-Length')
+                total = int(total.strip()) if total else 0
+                downloaded = 0
+                block_size = 8192
+                with open(local_path, 'wb') as f:
+                    while True:
+                        buffer = response.read(block_size)
+                        if not buffer:
+                            break
+                        f.write(buffer)
+                        downloaded += len(buffer)
+                        if total:
+                            done = int(40 * downloaded / total)
+                            sys.stdout.write(f"\r[{'#' * done}{'-' * (40 - done)}] {downloaded*100//total}%")
+                            sys.stdout.flush()
+            print(f"\n{Fore.GREEN}Download completed!{Style.RESET_ALL}")
+            return True
+        except Exception as e:
+            print(f"\n{Fore.RED}Download failed: {e}{Style.RESET_ALL}")
+            time.sleep(1)
+    print(f"{Fore.RED}All download attempts failed.{Style.RESET_ALL}")
+    return False
 
 def update_ludviglinux():
     local_path = os.path.abspath(sys.argv[0])
@@ -288,13 +293,13 @@ def run_command(cmd):
                         print(f"{Fore.RED}Failed to download SuperLauncher.{Style.RESET_ALL}")
 
             # KDE Plasma
-            elif pkg == "kde-plasma":
-                kde_file = os.path.join(BASE_DIR, "LudvigOS_KDE_Plasma.py")
-                print(f"{Fore.CYAN}Downloading KDE Plasma GUI simulation...{Style.RESET_ALL}")
-                if download_with_progress("https://raw.githubusercontent.com/ludvig2457/LudvigServers/main/LudvigOS/LudvigOS_KDE_Plasma.py", kde_file):
-                    print(f"{Fore.GREEN}KDE Plasma GUI simulation downloaded! Launch with 'kde-plasma'{Style.RESET_ALL}")
-                else:
-                    print(f"{Fore.RED}Failed to download KDE Plasma GUI.{Style.RESET_ALL}")
+        elif pkg == "kde-plasma":
+            kde_file = os.path.join(BASE_DIR, "LudvigOS_KDE_Plasma.py")
+            print(f"{Fore.CYAN}Downloading KDE Plasma GUI simulation...{Style.RESET_ALL}")
+            if download_with_progress("https://raw.githubusercontent.com/ludvig2457/LudvigServers/main/LudvigOS/LudvigOS_KDE_Plasma.py", kde_file):
+                print(f"{Fore.GREEN}KDE Plasma GUI simulation downloaded! Launch with 'kde-plasma'{Style.RESET_ALL}")
+            else:
+                print(f"{Fore.RED}Failed to download KDE Plasma GUI.{Style.RESET_ALL}")
 
         # Удаление пакета
         elif op == "-R" and len(args) > 2:
