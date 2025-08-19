@@ -3,6 +3,7 @@ import sys
 import getpass
 import urllib.request
 import time
+import random
 from colorama import Fore, Style, init
 init(autoreset=True)
 
@@ -14,12 +15,17 @@ VAR_DIR = os.path.join(BASE_DIR, "var")
 
 installed_packages = []
 history = []
-processes = {1: "init", 2: "bash", 3: "htop"}
+processes = {
+    1: {"name": "init", "cpu": 0, "mem": 0},
+    2: {"name": "bash", "cpu": 0, "mem": 0},
+    3: {"name": "htop", "cpu": 0, "mem": 0}
+}
 services = {"ssh": False, "nginx": False, "mysql": False}
 
 current_user = None
 current_dir = None
 next_pid = 4
+start_time = time.time()
 
 GITHUB_URL = "https://raw.githubusercontent.com/ludvig2457/LudvigServers/main/LudvigOS/LudvigOS.py"
 GUI_URL = "https://raw.githubusercontent.com/ludvig2457/LudvigServers/main/LudvigOS/LudvigOSGUI.py"
@@ -72,12 +78,10 @@ def download_with_progress(url, local_path):
 def update_ludviglinux():
     local_path = os.path.abspath(sys.argv[0])
     backup_path = local_path + ".bak"
-
     try:
         os.rename(local_path, backup_path)
         print(f"{Fore.YELLOW}Old version backed up.{Style.RESET_ALL}")
         time.sleep(0.5)
-
         success = download_with_progress(GITHUB_URL, local_path)
         if success:
             print(f"{Fore.GREEN}Old version removed.{Style.RESET_ALL}")
@@ -91,6 +95,31 @@ def update_ludviglinux():
         print(f"{Fore.RED}Update error: {e}{Style.RESET_ALL}")
         if os.path.exists(backup_path):
             os.rename(backup_path, local_path)
+
+def nano_editor(filename):
+    path = os.path.join(current_dir, filename)
+    content = ""
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
+    print(f"{Fore.YELLOW}-- NANO EDITOR: {filename} -- (type ':wq' to save and exit){Style.RESET_ALL}")
+    lines = content.splitlines()
+    while True:
+        for i, line in enumerate(lines):
+            print(f"{i+1}: {line}")
+        inp = input()
+        if inp == ":wq":
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("\n".join(lines))
+            print(f"{Fore.GREEN}File saved.{Style.RESET_ALL}")
+            break
+        else:
+            lines.append(inp)
+
+def update_processes():
+    for pid, proc in processes.items():
+        proc["cpu"] = random.randint(0, 50)
+        proc["mem"] = random.randint(0, 50)
 
 def run_command(cmd):
     global current_dir, next_pid
@@ -163,8 +192,18 @@ def run_command(cmd):
 
     # ===== Процессы =====
     elif command == "ps":
+        update_processes()
+        print(f"{'PID':<5} {'Name':<10} {'CPU%':<5} {'MEM%':<5}")
         for pid, proc in processes.items():
-            print(f"{pid:<5} {proc}")
+            print(f"{pid:<5} {proc['name']:<10} {proc['cpu']:<5} {proc['mem']:<5}")
+
+    elif command == "top":
+        update_processes()
+        print(f"{'PID':<5} {'Name':<10} {'CPU%':<5} {'MEM%':<5}")
+        for pid, proc in processes.items():
+            bar_cpu = "#" * (proc["cpu"] // 2)
+            bar_mem = "#" * (proc["mem"] // 2)
+            print(f"{pid:<5} {proc['name']:<10} CPU:[{bar_cpu:<25}] MEM:[{bar_mem:<25}]")
 
     elif command == "kill":
         if len(args) < 2:
@@ -173,12 +212,19 @@ def run_command(cmd):
             try:
                 pid = int(args[1])
                 if pid in processes:
-                    print(f"Killed process {pid} ({processes[pid]})")
+                    print(f"Killed process {pid} ({processes[pid]['name']})")
                     del processes[pid]
                 else:
                     print(f"kill: {pid}: no such process")
             except ValueError:
                 print("kill: pid must be a number")
+
+    # ===== Мини-редактор =====
+    elif command == "nano":
+        if len(args) < 2:
+            print("Usage: nano <filename>")
+        else:
+            nano_editor(args[1])
 
     # ===== Сервисы =====
     elif command == "systemctl":
@@ -263,6 +309,12 @@ def run_command(cmd):
 \\__\\_/__/  Terminal: Python Virtual OS
 {Style.RESET_ALL}""")
 
+    elif command == "uptime":
+        elapsed = int(time.time() - start_time)
+        hours, remainder = divmod(elapsed, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        print(f"Uptime: {hours}h {minutes}m {seconds}s")
+
     elif command == "shutdown":
         print("System shutting down...")
         sys.exit(0)
@@ -272,11 +324,10 @@ def run_command(cmd):
         os.execv(sys.executable, ["python"] + sys.argv)
 
     elif command == "help":
-        print("Commands: ls, cd, pwd, cat, touch, mkdir, rm, ps, kill, systemctl, pacman, history, clear, whoami, neofetch, gui, reboot, shutdown, exit")
+        print("Commands: ls, cd, pwd, cat, touch, mkdir, rm, ps, top, kill, nano, systemctl, pacman, history, clear, whoami, neofetch, uptime, gui, reboot, shutdown, exit")
 
     else:
         print(f"{command}: command not found")
-
 
 # ===== Основный цикл =====
 def run():
