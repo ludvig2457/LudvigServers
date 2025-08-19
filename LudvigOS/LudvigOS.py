@@ -258,13 +258,13 @@ def run_command(cmd):
 
         # Установка пакета
         if op == "-S" and len(args) > 2:
-            pkg = args[2]
+            pkg = args[2].lower()
             if pkg not in installed_packages:
                 installed_packages.append(pkg)
             print(f":: installing {pkg}... [DONE]")
 
-            # Специально для VS Code
-            if pkg.lower() == "code":
+            # VS Code
+            if pkg == "code":
                 code_path = os.path.join(BASE_DIR, "apps", "VSCodeSetup.exe")
                 os.makedirs(os.path.dirname(code_path), exist_ok=True)
                 if not os.path.exists(code_path):
@@ -275,8 +275,8 @@ def run_command(cmd):
                     else:
                         print(f"{Fore.RED}Failed to download VS Code.{Style.RESET_ALL}")
 
-            # Специально для SuperLauncher
-            elif pkg.lower() == "superlauncher":
+            # SuperLauncher
+            elif pkg == "superlauncher":
                 sl_path = os.path.join(BASE_DIR, "apps", "SuperLauncher1.4.0.7.exe")
                 os.makedirs(os.path.dirname(sl_path), exist_ok=True)
                 if not os.path.exists(sl_path):
@@ -287,9 +287,18 @@ def run_command(cmd):
                     else:
                         print(f"{Fore.RED}Failed to download SuperLauncher.{Style.RESET_ALL}")
 
+            # KDE Plasma
+            elif pkg == "kde-plasma":
+                kde_file = os.path.join(BASE_DIR, "LudvigOS_KDE_Plasma.py")
+                print(f"{Fore.CYAN}Downloading KDE Plasma GUI simulation...{Style.RESET_ALL}")
+                if download_with_progress("https://raw.githubusercontent.com/ludvig2457/LudvigServers/main/LudvigOS/LudvigOS_KDE_Plasma.py", kde_file):
+                    print(f"{Fore.GREEN}KDE Plasma GUI simulation downloaded! Launch with 'kde-plasma'{Style.RESET_ALL}")
+                else:
+                    print(f"{Fore.RED}Failed to download KDE Plasma GUI.{Style.RESET_ALL}")
+
         # Удаление пакета
         elif op == "-R" and len(args) > 2:
-            pkg = args[2]
+            pkg = args[2].lower()
             if pkg in installed_packages:
                 installed_packages.remove(pkg)
                 print(f":: removed {pkg}... [DONE]")
@@ -338,6 +347,14 @@ def run_command(cmd):
             os.startfile(sl_path)
         else:
             print(f"{Fore.RED}SuperLauncher is not installed. Use 'pacman -S superlauncher'{Style.RESET_ALL}")
+
+    elif command.lower() == "kde-plasma":
+        kde_file = os.path.join(BASE_DIR, "LudvigOS_KDE_Plasma.py")
+        if os.path.exists(kde_file):
+            print(f"{Fore.GREEN}Launching KDE Plasma GUI simulation...{Style.RESET_ALL}")
+            os.system(f"{sys.executable} {kde_file}")
+        else:
+            print(f"{Fore.RED}KDE Plasma GUI simulation is not installed. Use 'pacman -S kde-plasma'{Style.RESET_ALL}")
 
     # ===== GUI =====
     elif command == "gui":
