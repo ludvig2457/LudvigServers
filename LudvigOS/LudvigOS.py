@@ -261,8 +261,11 @@ def run_command(cmd):
             return
         op = args[1]
 
-        # Установка пакета
-        if op == "-S" and len(args) > 2:
+        # ===== Установка пакета =====
+        if op == "-S":
+            if len(args) < 3:
+                print("pacman: missing package name")
+                return
             pkg = args[2].lower()
             if pkg not in installed_packages:
                 installed_packages.append(pkg)
@@ -293,16 +296,19 @@ def run_command(cmd):
                         print(f"{Fore.RED}Failed to download SuperLauncher.{Style.RESET_ALL}")
 
             # KDE Plasma
-        elif pkg == "kde-plasma":
-            kde_file = os.path.join(BASE_DIR, "LudvigOS_KDE_Plasma.py")
-            print(f"{Fore.CYAN}Downloading KDE Plasma GUI simulation...{Style.RESET_ALL}")
-            if download_with_progress("https://raw.githubusercontent.com/ludvig2457/LudvigServers/main/LudvigOS/LudvigOS_KDE_Plasma.py", kde_file):
-                print(f"{Fore.GREEN}KDE Plasma GUI simulation downloaded! Launch with 'kde-plasma'{Style.RESET_ALL}")
-            else:
-                print(f"{Fore.RED}Failed to download KDE Plasma GUI.{Style.RESET_ALL}")
+            elif pkg == "kde-plasma":
+                kde_file = os.path.join(BASE_DIR, "LudvigOS_KDE_Plasma.py")
+                print(f"{Fore.CYAN}Downloading KDE Plasma GUI simulation...{Style.RESET_ALL}")
+                if download_with_progress("https://raw.githubusercontent.com/ludvig2457/LudvigServers/main/LudvigOS/LudvigOS_KDE_Plasma.py", kde_file):
+                    print(f"{Fore.GREEN}KDE Plasma GUI simulation downloaded! Launch with 'kde-plasma'{Style.RESET_ALL}")
+                else:
+                    print(f"{Fore.RED}Failed to download KDE Plasma GUI.{Style.RESET_ALL}")
 
-        # Удаление пакета
-        elif op == "-R" and len(args) > 2:
+        # ===== Удаление пакета =====
+        elif op == "-R":
+            if len(args) < 3:
+                print("pacman: missing package name")
+                return
             pkg = args[2].lower()
             if pkg in installed_packages:
                 installed_packages.remove(pkg)
@@ -310,13 +316,13 @@ def run_command(cmd):
             else:
                 print(f"pacman: {pkg} is not installed")
 
-        # Синхронизация базы
+        # ===== Синхронизация базы =====
         elif op == "-Sy":
             print(":: Synchronizing package databases...")
             time.sleep(0.5)
             print(":: Database updated!")
 
-        # Полное обновление системы
+        # ===== Полное обновление системы =====
         elif op == "-Syu":
             print(":: Synchronizing package databases...")
             time.sleep(0.5)
@@ -326,7 +332,7 @@ def run_command(cmd):
                 time.sleep(0.2)
             update_ludviglinux()
 
-        # Поиск установленных пакетов
+        # ===== Поиск установленных пакетов =====
         elif op == "-Qs":
             if installed_packages:
                 print("\n".join([f"local/{pkg} 1.0-1" for pkg in installed_packages]))
